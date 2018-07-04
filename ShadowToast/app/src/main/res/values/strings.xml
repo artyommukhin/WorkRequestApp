@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">ShadowToast</string>
+    <string name="toastButtonText">Tap here to see toast</string>
+</resources>
