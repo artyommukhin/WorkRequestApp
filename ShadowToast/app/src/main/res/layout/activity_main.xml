@@ -15,16 +15,12 @@
         android:text="@string/toastButtonText" />
 
     <Button
-        android:id="@+id/start_service_button"
+        android:id="@+id/goto_work_requests_activity_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
-        android:text="Start Service" />
+        android:text="To requests activity" />
 
-    <Button
-        android:id="@+id/stop_service_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:text="Stop Service" />
+
+
 </LinearLayout>

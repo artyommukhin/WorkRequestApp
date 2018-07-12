@@ -5,7 +5,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
@@ -15,23 +14,18 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button startServiceButton = findViewById(R.id.start_service_button);
-        Button stopServiceButton = findViewById(R.id.stop_service_button);
+        final Button toWorkRequestsActivity = findViewById(R.id.goto_work_requests_activity_button);
 
-        startServiceButton.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){
-                startService(new Intent(MainActivity.this, UnsentRequestCheckService.class));
+        final Intent intentToWorkRequests = new Intent(MainActivity.this, WorkRequestsActivity.class);
 
-            }
-        });
-
-        stopServiceButton.setOnClickListener(new View.OnClickListener(){
+        toWorkRequestsActivity.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
-               // stopService(new Intent(MainActivity.this, UnsentRequestCheckService.class));
+                startActivity(intentToWorkRequests);
             }
         });
+
+
     }
 
     @Override
@@ -42,4 +36,6 @@ public class MainActivity extends AppCompatActivity {
     public void showToast(View v){
         Toast.makeText(getApplicationContext(),"I'm toast!", Toast.LENGTH_LONG).show();
     }
+
+
 }
