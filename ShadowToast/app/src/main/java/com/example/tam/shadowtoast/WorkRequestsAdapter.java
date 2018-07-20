@@ -2,8 +2,10 @@ package com.example.tam.shadowtoast;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.arch.persistence.room.Room;
 import android.content.Context;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,26 +17,21 @@ import android.widget.Toast;
 import java.util.ArrayList;
 
 import static android.content.Context.ALARM_SERVICE;
-import static com.example.tam.shadowtoast.WorkRequestsActivity.completedRequests;
-import static com.example.tam.shadowtoast.WorkRequestsActivity.completedRequestsContain;
-import static com.example.tam.shadowtoast.WorkRequestsActivity.removeFromCompleted;
 
 public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
 
-    public static boolean alarmSet;
-
     private Context context;
-    private ArrayList<WorkRequest> notCompletedRequests;
+    private ArrayList<WorkRequest> incompleteWorkRequests;
     private LayoutInflater inflater;
     private int layout;
 
 
-    public WorkRequestsAdapter(Context context, int layout, ArrayList<WorkRequest> workRequests){
-        super(context, layout, workRequests);
+    public WorkRequestsAdapter(Context context, int layout, ArrayList<WorkRequest> incompleteWorkRequests){
+        super(context, layout, incompleteWorkRequests);
         this.context = context;
         this.inflater = LayoutInflater.from(context);
         this.layout = layout;
-        notCompletedRequests = getNotCompletedRequests(workRequests);
+        this.incompleteWorkRequests = incompleteWorkRequests;
     }
 
     @Override
@@ -50,39 +47,38 @@ public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
             viewHolder = (ViewHolder) convertView.getTag();
         }
 
-        final WorkRequest workRequest = notCompletedRequests.get(position);
+        final WorkRequest workRequest = incompleteWorkRequests.get(position);
 
         viewHolder.title.setText(workRequest.getTitle());
         viewHolder.payment.setText(workRequest.getPayment() + " руб.");
 
+        if (workRequest.isComplete()){
+            viewHolder.completed.setText("Готово");
+            viewHolder.completed.setTextColor(context.getResources().getColor(R.color.colorWorkComplete));
+        }
 
         viewHolder.completed.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                Button button = viewHolder.completed;
+                workRequest.setComplete(true);
 
-                if (!completedRequestsContain(workRequest)){
-                    completedRequests.add(workRequest);
-                    button.setText("Выполнено");
-
-                    if(!alarmSet){
-
-                        AlarmManager alarmManager = (AlarmManager)context.getSystemService(ALARM_SERVICE);
-                        PendingIntent pendingIntent = PendingIntent.getService(context, 0, new Intent(context, WorkRequestService.class),0);
-                        alarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME, 0, 10000, pendingIntent);
-
-                        alarmSet = true;
-                        Toast.makeText(context,"Service started from adapter", Toast.LENGTH_SHORT).show();
+                //
+                AsyncTask.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        AppDatabase db = Room.databaseBuilder(context, AppDatabase.class, "workrequestsdb").build();
+                        db.getWorkRequestDao().update(workRequest);
                     }
-                }
-                else {
-                    removeFromCompleted(workRequest);
-                    button.setText("Не выполнено");
-                }
+                });
+
+                Button button = viewHolder.completed;
+                button.setText("Готово");
+                button.setTextColor(context.getResources().getColor(R.color.colorWorkComplete));
+
+                Toast.makeText(context,"Заявка №"+workRequest.getId()+" отправлена в БД", Toast.LENGTH_SHORT).show();
             }
         });
-
         return convertView;
     }
 
@@ -96,18 +92,8 @@ public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
         }
     }
 
-    public ArrayList<WorkRequest> getNotCompletedRequests(ArrayList<WorkRequest> allRequests){
-        ArrayList<WorkRequest> notCompletedRequests = new ArrayList<>();
-        for (WorkRequest request : allRequests){
-            if (!request.isCompleted()){
-                notCompletedRequests.add(request);
-            }
-        }
-        return notCompletedRequests;
-    }
-
     @Override
     public int getCount() {
-        return notCompletedRequests.size();
+        return incompleteWorkRequests.size();
     }
 }

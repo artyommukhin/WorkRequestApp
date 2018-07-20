@@ -1,27 +1,88 @@
 package com.example.tam.shadowtoast;
 
 import android.app.AlarmManager;
+import android.app.IntentService;
 import android.app.PendingIntent;
-import android.app.Service;
+import android.arch.persistence.room.Room;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.AsyncTask;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.support.annotation.UiThread;
+import android.util.Log;
 import android.widget.Toast;
+import android.database.sqlite.*;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
-import static com.example.tam.shadowtoast.WorkRequestsActivity.completedRequests;
+public class WorkRequestService extends IntentService {
 
-public class WorkRequestService extends Service {
+    static boolean isConnection;
 
     public WorkRequestService() {
+        super("dbUpdate");
     }
 
-    @Nullable
     @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+    protected void onHandleIntent(@Nullable Intent intent) {
+        if (intent != null){
+            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(), "Service started", Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            AppDatabase db = Room.databaseBuilder(this, AppDatabase.class, "workrequestsdb").build();
+
+            ArrayList<WorkRequest> workRequestsInAppDb = (ArrayList<WorkRequest>) db.getWorkRequestDao().getAllWorkRequests();
+
+            ArrayList<WorkRequest> workRequestsToSend = new ArrayList<>();
+            for (WorkRequest request : workRequestsInAppDb){
+                if (request.isComplete() && !request.isSentToDb()){
+                    workRequestsToSend.add(request);
+                }
+            }
+
+            PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+            AlarmManager alarmManager = (AlarmManager)getSystemService(ALARM_SERVICE);
+
+            if (isConnection){
+
+                for (WorkRequest requestToSend : workRequestsToSend){
+                    final int id = requestToSend.getId();
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplicationContext(),"Заявка №" + id + " синхронизирована", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+
+                alarmManager.cancel(pendingIntent);
+
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getApplicationContext(),"Alarm cancelled from service", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+            else{
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getApplicationContext(),"Сервис не подключился к инету, попробует ещё раз через 20 сек", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        }
     }
 
     @Override
@@ -30,30 +91,8 @@ public class WorkRequestService extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-
-        for (WorkRequest request: completedRequests) {
-            request.setCompleted(true);
-        }
-        PendingIntent pendingIntent = PendingIntent.getService(this, 0, new Intent(this, WorkRequestService.class),0);
-        AlarmManager alarmManager = (AlarmManager)getSystemService(ALARM_SERVICE);
-        if (completedRequests.size()==0) {
-
-            alarmManager.cancel(pendingIntent);
-            WorkRequestsAdapter.alarmSet = false;
-            Toast.makeText(this,"Service cancelled from service", Toast.LENGTH_SHORT).show();
-        }
-
-        Toast.makeText(this,"Count of unsent completed requests: " + completedRequests.size(), Toast.LENGTH_SHORT).show();
-
-        this.stopSelf();
-        return START_STICKY;
-    }
-
-    @Override
     public void onDestroy() {
         super.onDestroy();
+        Toast.makeText(this,"Сервис уничтожен", Toast.LENGTH_SHORT).show();
     }
-
-
 }
