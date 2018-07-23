@@ -5,21 +5,12 @@ import android.app.IntentService;
 import android.app.PendingIntent;
 import android.arch.persistence.room.Room;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Looper;
 import android.support.annotation.Nullable;
-import android.support.annotation.UiThread;
-import android.util.Log;
 import android.widget.Toast;
-import android.database.sqlite.*;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 public class WorkRequestService extends IntentService {
 
@@ -35,7 +26,7 @@ public class WorkRequestService extends IntentService {
             new Handler(Looper.getMainLooper()).post(new Runnable() {
                 @Override
                 public void run() {
-                    Toast.makeText(getApplicationContext(), "Service started", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getApplicationContext(), "Сервис запущен", Toast.LENGTH_SHORT).show();
                 }
             });
 
@@ -45,7 +36,7 @@ public class WorkRequestService extends IntentService {
 
             ArrayList<WorkRequest> workRequestsToSend = new ArrayList<>();
             for (WorkRequest request : workRequestsInAppDb){
-                if (request.isComplete() && !request.isSentToDb()){
+                if (request.isComplete()){
                     workRequestsToSend.add(request);
                 }
             }
@@ -70,7 +61,7 @@ public class WorkRequestService extends IntentService {
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(getApplicationContext(),"Alarm cancelled from service", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(),"Alarm отменён сервисом", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
@@ -78,7 +69,7 @@ public class WorkRequestService extends IntentService {
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(getApplicationContext(),"Сервис не подключился к инету, попробует ещё раз через 20 сек", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(),"Нет интернета, повтор через 1 минуту", Toast.LENGTH_SHORT).show();
                     }
                 });
             }

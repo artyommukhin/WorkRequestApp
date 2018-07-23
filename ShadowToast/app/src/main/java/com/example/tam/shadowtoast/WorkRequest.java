@@ -14,9 +14,8 @@ public final class WorkRequest {
     private Date assignmentDate;
     private Date deadline;
     private boolean complete;
-    private boolean sentToDb;
 
-    public WorkRequest(int id, String title, String description, int payment, Date assignmentDate, Date deadline, boolean complete, boolean sentToDb){
+    public WorkRequest(int id, String title, String description, int payment, Date assignmentDate, Date deadline, boolean complete){
         this.id = id;
         this.title = title;
         this.description = description;
@@ -24,7 +23,6 @@ public final class WorkRequest {
         this.assignmentDate = assignmentDate;
         this.deadline = deadline;
         this.complete = complete;
-        this.sentToDb = sentToDb;
     }
 
     public int getId() {
@@ -74,12 +72,5 @@ public final class WorkRequest {
     }
     public void setComplete(boolean complete){
         this.complete = complete;
-    }
-
-    public boolean isSentToDb() {
-        return sentToDb;
-    }
-    public void setSentToDb(boolean sentToDb) {
-        this.sentToDb = sentToDb;
     }
 }

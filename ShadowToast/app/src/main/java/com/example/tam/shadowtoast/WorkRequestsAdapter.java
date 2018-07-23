@@ -1,10 +1,7 @@
 package com.example.tam.shadowtoast;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.arch.persistence.room.Room;
 import android.content.Context;
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,7 +13,6 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
-import static android.content.Context.ALARM_SERVICE;
 
 public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
 
@@ -56,6 +52,10 @@ public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
             viewHolder.completed.setText("Готово");
             viewHolder.completed.setTextColor(context.getResources().getColor(R.color.colorWorkComplete));
         }
+        else{
+            viewHolder.completed.setText("Не готово");
+            viewHolder.completed.setTextColor(context.getResources().getColor(R.color.colorWorkIncomplete));
+        }
 
         viewHolder.completed.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -63,7 +63,6 @@ public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
 
                 workRequest.setComplete(true);
 
-                //
                 AsyncTask.execute(new Runnable() {
                     @Override
                     public void run() {

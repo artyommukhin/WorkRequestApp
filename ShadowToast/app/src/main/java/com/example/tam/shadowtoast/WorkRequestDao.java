@@ -2,8 +2,6 @@ package com.example.tam.shadowtoast;
 
 import android.arch.persistence.room.*;
 import android.support.annotation.WorkerThread;
-
-import java.util.ArrayList;
 import java.util.List;
 
 @Dao
@@ -18,18 +16,12 @@ public interface WorkRequestDao {
     @Query("DELETE FROM workrequest" )
     void deleteAll();
 
-    @Query("DELETE FROM workrequest WHERE id = :id")
-    void deleteById(int id);
-
     @Update
     void update(WorkRequest workRequest);
 
+    @Query("UPDATE workrequest SET complete = 0")
+    void dropAllRequests();
+
     @Query("SELECT * FROM workrequest")
     List<WorkRequest> getAllWorkRequests();
-
-    @Query("SELECT * FROM workrequest WHERE complete = 0")
-    List<WorkRequest> getAllIncompleteWorkRequests();
-
-    @Query("SELECT * FROM workrequest WHERE complete = 1")
-    List<WorkRequest> getAllCompleteWorkRequests();
 }
