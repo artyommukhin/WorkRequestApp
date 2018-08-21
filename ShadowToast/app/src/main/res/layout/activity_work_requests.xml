@@ -9,25 +9,65 @@
     <Button
         android:id="@+id/start_alarm_button"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:text="Запустить AlarmService"/>
 
     <Button
         android:id="@+id/stop_alarm_button"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:text="Остановить AlarmService"/>
-
-    <Button
-        android:id="@+id/toggle_intenet_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Вкл/выкл интернет"/>
 
     <ListView
         android:id="@+id/work_requests_lv"
         android:choiceMode="multipleChoice"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="0dp"
+        android:layout_weight="9"/>
+
+    <Button
+        android:id="@+id/start_location_upd_button"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:text="Начать обновление местоположения"/>
+
+    <Button
+        android:id="@+id/stop_location_upd_button"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:text="Остановить обновление местоположения"/>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <TextView
+            android:id="@+id/coordinates_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:text="Координаты"/>
+        <TextView
+            android:id="@+id/latitude_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/coordinates_title"
+            android:layout_alignParentEnd="true"
+            android:text="Широта:"
+            />
+        <TextView
+            android:id="@+id/longitude_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/coordinates_title"
+            android:layout_alignParentStart="true"
+            android:text="Долгота:"
+            />
+    </RelativeLayout>
 
 </LinearLayout>

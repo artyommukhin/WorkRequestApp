@@ -22,6 +22,7 @@ public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
     private int layout;
 
 
+
     public WorkRequestsAdapter(Context context, int layout, ArrayList<WorkRequest> incompleteWorkRequests){
         super(context, layout, incompleteWorkRequests);
         this.context = context;
@@ -61,21 +62,24 @@ public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
             @Override
             public void onClick(View v) {
 
-                workRequest.setComplete(true);
+                if (!workRequest.isComplete()) {
 
-                AsyncTask.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        AppDatabase db = Room.databaseBuilder(context, AppDatabase.class, "workrequestsdb").build();
-                        db.getWorkRequestDao().update(workRequest);
-                    }
-                });
+                    workRequest.setComplete(true);
+
+                    AsyncTask.execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            AppDatabase db = Room.databaseBuilder(context, AppDatabase.class, "workrequestsdb").build();
+                            db.getWorkRequestDao().update(workRequest);
+                        }
+                    });
+
+                    Toast.makeText(context, "Заявка №" + workRequest.getId() + " отправлена в БД", Toast.LENGTH_SHORT).show();
+                }
 
                 Button button = viewHolder.completed;
                 button.setText("Готово");
                 button.setTextColor(context.getResources().getColor(R.color.colorWorkComplete));
-
-                Toast.makeText(context,"Заявка №"+workRequest.getId()+" отправлена в БД", Toast.LENGTH_SHORT).show();
             }
         });
         return convertView;
