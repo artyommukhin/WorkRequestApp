@@ -3,6 +3,7 @@ package com.example.tam.shadowtoast;
 import android.arch.persistence.room.Room;
 import android.content.Context;
 import android.os.AsyncTask;
+import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,18 +18,18 @@ import java.util.ArrayList;
 public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
 
     private Context context;
-    private ArrayList<WorkRequest> incompleteWorkRequests;
+    private ArrayList<WorkRequest> workRequests;
     private LayoutInflater inflater;
     private int layout;
 
 
 
-    public WorkRequestsAdapter(Context context, int layout, ArrayList<WorkRequest> incompleteWorkRequests){
-        super(context, layout, incompleteWorkRequests);
+    public WorkRequestsAdapter(Context context, int layout, ArrayList<WorkRequest> workRequests){
+        super(context, layout);
         this.context = context;
         this.inflater = LayoutInflater.from(context);
         this.layout = layout;
-        this.incompleteWorkRequests = incompleteWorkRequests;
+        this.workRequests = workRequests;
     }
 
     @Override
@@ -44,10 +45,10 @@ public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
             viewHolder = (ViewHolder) convertView.getTag();
         }
 
-        final WorkRequest workRequest = incompleteWorkRequests.get(position);
+        final WorkRequest workRequest = workRequests.get(position);
 
         viewHolder.title.setText(workRequest.getTitle());
-        viewHolder.payment.setText(workRequest.getPayment() + " руб.");
+        viewHolder.payment.setText(String.format("%d руб.", workRequest.getPayment()));
 
         if (workRequest.isComplete()){
             viewHolder.completed.setText("Готово");
@@ -97,6 +98,17 @@ public class WorkRequestsAdapter extends ArrayAdapter<WorkRequest> {
 
     @Override
     public int getCount() {
-        return incompleteWorkRequests.size();
+        return workRequests.size();
+    }
+
+    @Nullable
+    @Override
+    public WorkRequest getItem(int position) {
+        return workRequests.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return position;
     }
 }

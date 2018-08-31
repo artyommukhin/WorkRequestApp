@@ -7,15 +7,30 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
+import android.util.Log;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.net.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 
 
 public class WorkRequestService extends IntentService {
@@ -39,21 +54,74 @@ public class WorkRequestService extends IntentService {
 
             AppDatabase db = Room.databaseBuilder(this, AppDatabase.class, "workrequestsdb").build();
 
-            ArrayList<WorkRequest> workRequestsInAppDb = (ArrayList<WorkRequest>) db.getWorkRequestDao().getAllWorkRequests();
+            if (isOnline()) {
+                //SEND DATA TO DB
+                ArrayList<WorkRequest> workRequestsInAppDb = (ArrayList<WorkRequest>) db.getWorkRequestDao().getAllWorkRequests();
+                if (workRequestsInAppDb != null) {
+                    for (WorkRequest request : workRequestsInAppDb) {
+                        if (request.isComplete()) {
+                            final int id = request.getId();
 
-            ArrayList<WorkRequest> workRequestsToSend = new ArrayList<>();
-            for (WorkRequest request : workRequestsInAppDb) {
-                if (request.isComplete()) {
-                    workRequestsToSend.add(request);
+                            try {
+                                URL url = new URL(getString(R.string.server_query_url));
+                                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                                connection.setConnectTimeout(5000);
+                                connection.setReadTimeout(3000);
+                                connection.setDoOutput(true);//POST
+
+                                Uri.Builder builder = new Uri.Builder()
+                                        .appendQueryParameter("id", Integer.toString(request.getId()));
+
+                                String query = builder.build().getEncodedQuery();
+
+                                OutputStream os = connection.getOutputStream();
+                                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+                                writer.write(query);
+                                writer.flush();
+                                writer.close();
+                                os.close();
+                                connection.connect();
+
+                                String response = null;
+                                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                                    InputStream input = connection.getInputStream();
+                                    BufferedReader reader = new BufferedReader(new InputStreamReader(input));
+                                    StringBuilder result = new StringBuilder();
+                                    String line;
+
+                                    while ((line = reader.readLine()) != null) {
+                                        result.append(line);
+                                    }
+                                    response = result.toString();
+                                }
+
+                                JSONObject jResponse = new JSONObject(response);
+                                boolean error = jResponse.getBoolean("error");
+                                if (!error) {
+                                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Toast.makeText(getApplicationContext(), "Заявка №" + id + " синхронизирована", Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                                }
+                            } catch (final Exception e) {
+                                Log.d("WRService", e.getMessage());
+                                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getApplicationContext(), "Ошибка синхронизации заявки №" + id, Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                            }
+                        }
+                    }
                 }
-            }
-
-            for (WorkRequest requestToSend : workRequestsToSend) {
-                final int id = requestToSend.getId();
+            }else {
                 new Handler(Looper.getMainLooper()).post(new Runnable() {
                     @Override
                     public void run() {
-                        Toast.makeText(getApplicationContext(), "Заявка №" + id + " синхронизирована", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "No Internet", Toast.LENGTH_LONG).show();
                     }
                 });
             }
@@ -177,5 +245,16 @@ public class WorkRequestService extends IntentService {
             socket.close();
             return true;
         } catch (IOException e) { return false; }
+    }
+
+    Date dateParse(String dateString) {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+        Date date = new Date();
+        try {
+            date = format.parse(dateString);
+        } catch (ParseException e) {
+            Toast.makeText(getApplicationContext(), dateString + "did not parsed", Toast.LENGTH_LONG).show();
+        }
+        return date;
     }
 }

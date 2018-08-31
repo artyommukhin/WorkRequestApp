@@ -12,12 +12,15 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
@@ -25,12 +28,23 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
-import java.util.concurrent.ExecutionException;
 
 
 public class WorkRequestsActivity extends AppCompatActivity implements LocationListener {
@@ -43,6 +57,7 @@ public class WorkRequestsActivity extends AppCompatActivity implements LocationL
     LocationManager locationManager;
     Location currentLocation;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,6 +65,7 @@ public class WorkRequestsActivity extends AppCompatActivity implements LocationL
 
         Button startAlarmButton = findViewById(R.id.start_alarm_button);
         Button stopAlarmButton = findViewById(R.id.stop_alarm_button);
+        Button refreshButton = findViewById(R.id.refresh_listview_button);
         ListView workRequestsLV = findViewById(R.id.work_requests_lv);
 
         Button startLocationUpdate = findViewById(R.id.start_location_upd_button);
@@ -85,16 +101,29 @@ public class WorkRequestsActivity extends AppCompatActivity implements LocationL
             }
         });
 
-        ArrayList<WorkRequest> workRequestsFromDb = new ArrayList<>();
+        final ArrayList<WorkRequest> workRequestsList = new ArrayList<>();
         try {
-            workRequestsFromDb = new AddWorkRequestsToDb().execute().get();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+            workRequestsList.addAll(new GetAllWorkRequestsFromAppDb().execute().get());
+        } catch (Exception e) {
+            Log.d("WRActivity", e.getMessage());
         }
-        final ArrayList<WorkRequest> workRequests = workRequestsFromDb;
 
-        WorkRequestsAdapter adapter = new WorkRequestsAdapter(this, R.layout.work_requests_list_item, workRequests);
-        workRequestsLV.setAdapter(adapter);
+        final WorkRequestsAdapter listViewAdapter = new WorkRequestsAdapter(this, R.layout.work_requests_list_item, workRequestsList);
+        workRequestsLV.setAdapter(listViewAdapter);
+
+        refreshButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new UploadWorkRequestsToAppDb().execute();
+                workRequestsList.clear();
+                try {
+                    workRequestsList.addAll(new GetAllWorkRequestsFromAppDb().execute().get());
+                } catch (Exception e) {
+                    Log.d("WRActivity", e.getMessage());
+                }
+                listViewAdapter.notifyDataSetChanged();
+            }
+        });
 
         workRequestsLV.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -300,67 +329,107 @@ public class WorkRequestsActivity extends AppCompatActivity implements LocationL
 
 
     //SQLite
-    class AddWorkRequestsToDb extends AsyncTask<Void, Void, ArrayList<WorkRequest>> {
+    class GetAllWorkRequestsFromAppDb extends AsyncTask<Void, Void, ArrayList<WorkRequest>>{
 
-        AppDatabase db;
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "workrequestsdb").build();
-        }
+        AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "workrequestsdb").build();
 
         @Override
         protected ArrayList<WorkRequest> doInBackground(Void... voids) {
-            WorkRequest wr1 = new WorkRequest(
-                    1,
-                    "Забить гвоздь",
-                    "В гипсовую стену",
-                    10,
-                    dateParse("2018-01-01 00:00:00"),
-                    dateParse("2018-02-01 00:00:00"),
-                    false);
-
-            WorkRequest wr2 = new WorkRequest(
-                    2,
-                    "Сменить лампочку",
-                    "Лампочка за счёт заказчика",
-                    5,
-                    dateParse("2018-01-01 00:00:00"),
-                    dateParse("2018-02-01 00:00:00"),
-                    false);
-
-            WorkRequest wr3 = new WorkRequest(
-                    3,
-                    "Наклеить обои",
-                    "Обои за счёт заказчика",
-                    300,
-                    dateParse("2018-01-01 00:00:00"),
-                    dateParse("2018-02-01 00:00:00"),
-                    false);
-
-            WorkRequest[] list = {wr1, wr2, wr3};
-
-            db.getWorkRequestDao().deleteAll();
-            db.getWorkRequestDao().insertAll(list);
-
             return (ArrayList<WorkRequest>) db.getWorkRequestDao().getAllWorkRequests();
         }
+    }
+
+    class UploadWorkRequestsToAppDb extends AsyncTask<Void, Void, Void> {
+
+        AppDatabase db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "workrequestsdb").build();
 
         @Override
-        protected void onPostExecute(ArrayList<WorkRequest> workRequests) {
-            super.onPostExecute(workRequests);
-        }
+        protected Void doInBackground(Void... voids) {
+            if(isOnline()) {
+                db.getWorkRequestDao().deleteAll();
+                try {
+                    URL url = new URL(getString(R.string.server_query_url));
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setConnectTimeout(5000);
+                    connection.setReadTimeout(3000);
+                    //GET
+                    connection.connect();
 
-        Date dateParse(String dateString) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
-            Date date = new Date();
-            try {
-                date = format.parse(dateString);
-            } catch (ParseException e) {
-                Toast.makeText(getApplicationContext(), dateString + "did not parsed", Toast.LENGTH_LONG).show();
+                    String response = null;
+                    if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+
+                        StringBuilder result = new StringBuilder();
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            result.append(line);
+                        }
+                        response = result.toString();
+                    }
+
+                    JSONArray jsonResponseArray = new JSONArray(response);
+                    for (int i = 0; i < jsonResponseArray.length(); i++) {
+                        JSONObject jsonWR = jsonResponseArray.getJSONObject(i);
+                        WorkRequest newWR = new WorkRequest(
+                                jsonWR.getInt("id"),
+                                jsonWR.getString("title"),
+                                jsonWR.getString("description"),
+                                jsonWR.getInt("payment"),
+                                dateParse(jsonWR.getString("assignment_date")),
+                                dateParse(jsonWR.getString("deadline")),
+                                intToBoolean(jsonWR.getInt("completed"))
+                        );
+                        boolean isCollision = false;
+                        for (WorkRequest wrInDb : db.getWorkRequestDao().getAllWorkRequests()) {
+                            if (wrInDb.getId() == newWR.getId()) {
+                                isCollision = true;
+                                break;
+                            }
+                        }
+                        if (isCollision) {
+                            db.getWorkRequestDao().update(newWR);
+                        } else {
+                            db.getWorkRequestDao().insertAll(newWR);
+                        }
+                    }
+                } catch (final Exception e) {
+                    Log.d("WRService", e.getMessage());
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getApplicationContext(), "Ошибка связи с сервером", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
             }
-            return date;
+            return null;
         }
+    }
+
+
+    public boolean isOnline() {
+        try {
+            Socket socket = new Socket();
+            SocketAddress sockaddr = new InetSocketAddress("8.8.8.8", 53);
+
+            socket.connect(sockaddr, 1500);
+            socket.close();
+            return true;
+        } catch (IOException e) { return false; }
+    }
+
+    Date dateParse(String dateString) {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+        Date date = new Date();
+        try {
+            date = format.parse(dateString);
+        } catch (ParseException e) {
+            Toast.makeText(getApplicationContext(), dateString + "did not parsed", Toast.LENGTH_LONG).show();
+        }
+        return date;
+    }
+
+    boolean intToBoolean(int num) {
+        return num != 0;
     }
 }

@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">ShadowToast</string>
-    <string name="toastButtonText">Tap here to see toast</string>
+    <string name="server_query_url">http://192.168.1.9/work_requests.php</string>
 </resources>
